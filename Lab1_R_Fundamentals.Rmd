@@ -1,0 +1,949 @@
+---
+title: "STAT462 Computer Lab 1"
+subtitle: "R Fundmentals"
+author: "Speedy Jiang"
+output:
+  html_document: 
+    toc: yes
+    number_sections: yes
+    toc_float: yes
+---
+
+```{=html}
+<style>
+.boxTask {
+background-color: lightblue;
+color: black;
+border: 2px solid black;
+margin: 5px;
+padding: 5px;
+font-style: italic;
+}
+
+
+.boxNote {
+background-color: Tomato;
+color: black;
+border: 2px solid black;
+margin: 5px;
+padding: 5px;
+}
+
+</style>
+```
+```{r setup, include = FALSE}
+Sys.setenv(LANG = "en")
+```
+
+::: boxNote
+This lab contains some R fundamentals. If you're new to R, you can check *Lab0* for some extra support. If you already know some basics, let's get into it. 😉
+:::
+
+# Workflow
+
+## Working directory
+
+The place where R looks for files to read from or to save to by default is the *Working directory*.
+
+::: boxTask
+The current working directory is displayed at the top of the console, can you spot it on your Rstudio?
+:::
+
+We can print the working directory out with the code `getwd()` and use `setwd()` to change it if you prefer another location.
+
+## Workspace
+
+Usually we write R code in an R script or with an Rmd file(we will elaborate this part later), the code would involve a lot of objects in most cases, like the variables assigned, datasets imported, functions defined.
+
+we can use `ls()` or `objects()` to get a listing of these objects, or, look at the upper right panel named **Environment**.
+
+We may exit RStudio before completing our work and pick up where we left off later. By default[^1], the current running R environment including all the created objects, collectively known as the **workspace**, is automatically saved in a .RData file upon closing RStudio. This convenient feature allows us to immediately resume our tasks when we reopen Rstudio. However, it is still advisable to save your R codes as R scripts or R markdown files, so you can safely document your work and ensure your work is reproducible[^2].
+
+[^1]: This setting can be alternated though Tools $\rightarrow$ Global Options, then uncheck the *Restore .RData into workspace at startup* under **Workspace**
+
+[^2]: <https://r4ds.hadley.nz/workflow-scripts#what-is-the-source-of-truth>
+
+## Projects
+
+A good practice to manage the work in RStudio is to use **RStudio project**. This feature of RStudio provides a way to organize and maintain all the files associated with a given project in one place (input data, R scripts, results, plots).[^3]
+
+[^3]: <https://r4ds.hadley.nz/workflow-scripts#rstudio-projects>
+
+::: boxNote
+**LET'S CREATE AN** ***R project:***
+
+*File*(or the blue cube icon with `R` at upper-right corner) $\rightarrow$ *New Project* $\rightarrow$ *New Directory* $\rightarrow$ *New Project* $\rightarrow$ input a Directory name and choose the location for it $\rightarrow$ click *Create Project*
+:::
+
+Very often, it is the step 1 of your work.
+
+If you have created a project now, you should see the directory display on **Console** panel changed.
+
+## Path
+
+::: boxTask
+Now that we have an R project, let's create an R script. This is how you create an R script: *File* $\rightarrow$ *New File* $\rightarrow$ *R Script*. Do not leave it untitled, save it with a sensible name, for example, "STAT462_Lab1", and run the following code:
+:::
+
+```{r}
+# in order to reproduce the same result, we set a seed here
+set.seed(462)
+
+# generate 100 numbers
+nums <- rnorm(100)
+```
+
+```{r}
+# generate a png file to display the density curve 
+png('curve.png')
+plot(dnorm(nums)~nums)
+dev.off()
+
+# generate a csv file store the numbers 
+write.csv(nums, "random_numbers.csv", row.names = FALSE)
+```
+
+Check the **File** panel on the right, we have a csv file and a png file. Files created will be saved under the same working directory by default, if we do not specify a directory.
+
+We can also read an external data set into R. Let's try the file we just created.
+
+```{r}
+df <- read.csv("random_numbers.csv")
+```
+
+To read a csv file from the current working directory, we just need to pass the file name to `read.csv()`. This is a *relative path*. Alternatively, we can read a file using the full directory (*absolute path*).
+
+```{r eval=FALSE}
+# replace THE/PATH/TO/YOUR/PROJECT with your project path 
+df <- read.csv("THE/PLACE/YOU/CREATED/THE/PROJECT/random_numbers.csv")
+```
+
+We shall avoid using the full directory in the script like that. It is unlikely that someone else has the exact same directory as yours. Also in different operating system, the directory is presented differently. Windows uses backslashes(`\`), Mac and Linux use slashes(`/`)[^4].
+
+[^4]: <https://r4ds.hadley.nz/workflow-scripts#relative-and-absolute-paths>
+
+## Wrap up
+
+-   Working directory: The location on your file system where R reads files from or saves files to.
+-   Workspace: The environment when R is running and all the objects that have been created or loaded.
+-   Project: A built-in support in RStudio to keep all the files associated with a given project, to create a *project* is usually the step 1 when you start working on something new.
+-   Path: It is recommended to use the relative path, not the absolute path, in your script.
+
+# Indexing
+
+One more thing about lists and vectors: Sometimes you need to get at specific elements. This is done by putting square brackets after the list/vector, and specifying which element you want.
+
+```{r}
+vec <- c(100, 50, 25, 12, 6)
+print(vec[2])
+```
+
+We can also change entries that way:
+
+```{r}
+vec[3] = 1
+vec
+```
+
+::: boxTask
+From what you know about vectors, what will happen if you assign the string "a" to the first entry of the vector `vec`? Try it and verify.
+:::
+
+Indexing is very flexible and can even handle logical statements. First we create the first 10 square numbers. Which are divisible by 7?
+
+```{r}
+x <- (1:10)^2
+x[x %% 7 == 0]
+```
+
+::: boxTask
+What is the difference between `x[x %% 7 == 0]` and `x %% 7 == 0` ? Think about it and verify.
+:::
+
+# Random numbers
+
+In previous section, we used `set.seed()` and `rnorm()` to get a series of "random" numbers in a certain pattern.
+
+## Random, but replicable
+
+`rnorm()` is a function that generates pseudo-random numbers . While these numbers are not truly random, they are sufficiently unpredictable for many practical purposes. The `set.seed()` function controls the particular sequence of numbers generated, so we can get the exact same set of numbers every time we run the code. It takes any arbitrary integer number as argument.
+
+```{r}
+set.seed(462)
+rnorm(100)
+```
+
+::: boxTask
+Change the seed to your favorite number and see how you get a different result (but the same one every time).
+:::
+
+## Random, following a specific distribution.
+
+`rnorm(n, mean = 0, sd = 1)` generates random numbers that follow a normal distribution. Argument of `n` controls how many random number to generate. If `mean` and `sd` are not specified, the normal distribution will have mean of zero and standard deviation of one by default.
+
+```{r}
+hist(rnorm(10000))
+```
+
+We will frequently encounter functions like `rnorm()`to introduce randomness. For example, we could create training and test data for machine learning tasks.
+
+Similarly, there are other pseudo-random generators that can generate random numbers but follow other distributions, for example:
+
+```{r}
+# display four graphs in a 2x2 grid layout
+par(mfrow = c(2, 2))
+
+hist(rexp(10000), main = "Exponential distribution")
+hist(runif(10000), main = "Uniform distribution")
+hist(rchisq(10000, 10), main = "Chi-squared distribution")
+hist(rpois(10000, 3), main = "Poisson distribution")
+
+# resets the plotting area to display only one graph at a time
+par(mfrow = c(1,1))
+```
+
+## Random subsampling
+
+Another frequently used function that involves randomness is `sample()`, which allows us to randomly select a subset from a pool, either with or without replacement.
+
+For example, we can randomly split the *nums* variable created earlier into a training set and a test set with an Ratio of 7:3. The last line of code uses some clever indexing trick to check which elements of `nums` are in `nums_train` , and then taking the converse by negating with `!`.
+
+```{r}
+# randomly select 70 numbers from nums as training set
+nums_train <- sample(nums, size = 70, replace = FALSE)
+
+# any numbers that not in training set go to the testing set
+nums_test <- nums[!nums %in% nums_train]
+```
+
+::: boxTask
+*A small challenge*: Experiment with *nums_train* and *nums_test*. Can you verify that they are in an Ratio of 7:3, contain no duplicates within the sets and have no overlap between each other?
+:::
+
+In some other circumstances, we may wish to do sampling with replacement -- a number could be selected more than one time, all we need to do is to set the `replace` argument in `sample()` from `FALSE` to `TRUE`
+
+```{r}
+# switch replace from FALSE to TRUE
+sample_with_replace <- sample(nums, size = 70, replace = TRUE)
+
+# those numbers are sampled more than once
+sample_with_replace[duplicated(sample_with_replace)]
+```
+
+## Wrap up
+
+-   Use `set.seed()` to make the result reproducible
+-   Use `r---()` family to generate random numbers that follow a certain distribution
+-   Use `sample()` to conduct random sampling
+
+# Functions, if statements and for loops
+
+## For loop syntax
+
+Like all programming languages, R supports looping. While there is extensive online advice advocating against using loops in R, primarily due to efficiency concerns, this should not overly concern beginners. Although looping might not be the fastest method available in R, it is often much clearer and more understandable than alternative approaches.
+
+The structure of a *for loop* is:
+
+```{r eval=FALSE}
+for (element in vector) {
+  process
+}
+```
+
+## If and else statment syntax
+
+With the similar syntax, the *if* statement can be structured as:
+
+```{r eval = FALSE}
+if (test_expression) {
+  process when it is true
+}
+```
+
+And the *else* statement is often paired with *if*:
+
+```{r eval = FALSE}
+if (test_expression) {
+  process when it is true
+} else {
+  process when it is false
+}
+```
+
+::: boxTask
+Using a for loop (over all numbers in `1:100`): Print all numbers below 100 divisible by 13 but not divisible by 2.
+:::
+
+## Function syntax
+
+R, like all programming languages, supports functions. R does not have procedures, only functions. There are a vast collection of packages available that offer numerous functions. Despite this, there are occasions where you might find it necessary to create your own custom functions.
+
+The syntax to build a customised function is:
+
+```{r eval=FALSE}
+function_name <- function(arguments) {
+  process
+}
+```
+
+Now, let's try the customised function structured with *loop* and *if* statement. The following function negates every second entry in a vector.
+
+```{r}
+negate2nd <- function(x) {
+  for (i in 1:length(x)) {
+    if (i %% 2 == 1) {
+      x[i] = -x[i]
+    }
+  }
+  x
+}
+```
+
+Some clarifications:
+
+-   %% is a modulus operator. 1%%2 = 1, 2%%2 = 0, 3%%2 = 1 etc.
+-   == is an equality test - the values of the variables must be equal
+-   The for loop is contained by its brackets - no "endfor" is required
+-   The if statement is contained by its brackets - no "endif" is required but there are options of *else if* and *else*.
+-   1:length(x) is a concise way to create a sequence from 1 to the number of elements in x, equivalent to c(1, 2, 3, ..., length(x)).
+-   This for loop iterates over consecutive elements in the sequence *1:length(x)*
+-   x[i] refers to the element at the *i*th position in the vector x and can be used for both retrieving and modifying the value at that position
+-   The function returns the modified x vector as its final step of execution
+
+Now let's try call the function we just created.
+
+```{r}
+myvar <- c(9, 5, 7, 3, 0, 6, 6, 1)
+negate2nd(myvar)
+```
+
+Whoops, it seems like it is negating from the first element.
+
+::: boxTask
+**Can you fix the function?**
+:::
+
+In R, functions can be addressed as variables. We can pass them around as parameters and print them.
+
+```{r}
+print(negate2nd)
+```
+
+## `lapply`/`sapply`/`vapply`
+
+For loops are neat and easy to understand, but there is another important programming paradigm popular in `R`, so we take some time to understand it.
+
+Let's say we have a function that checks if a number is divisible by 6 and not by 5. E.g., 6 would satisfy this criterion, but 30 would not (because it is divisible by 5):
+
+```{r}
+ourFnc <- function(x){
+  return (x %% 6 == 0 & !(x %% 5 == 0))
+}
+ourFnc(6)
+ourFnc(30)
+```
+
+Let's say we have a long list of numbers that we want to check with this function. Now we know how to do this with a for loop:
+
+```{r}
+numberSatisfiesCriterion = c() # create a vector to record criterion for numbers
+numbers <- c(6,10,12,15,18,20,24,28,30)
+for (n in 1:length(numbers)){
+  numberSatisfiesCriterion <- c(numberSatisfiesCriterion, ourFnc(numbers[n]))
+}
+numberSatisfiesCriterion
+```
+
+OK so that does indeed work, but it takes a lot of lines to set up. Is there a quicker way? There is! Essentially, in this `for` loop we just apply a function over and over again to elements in a vector. The function `lapply` and its cousins `sapply`, `vapply`, ... does exactly that. It takes two arguments: the first argument is a list of inputs, and the second argument is a function that we want to apply to all values in this list. We are going to use `sapply`here (the `s` is for "simplified")
+
+```{r}
+sapply(numbers, ourFnc)
+```
+
+There, much better and shorter! Of course, the brevity means that code is a bit harder to read (at least initially), so get some practice and go back to this lab if you are struggling with `apply` in later labs.
+
+Note that in this very specific example we could have just run
+
+```{r}
+ourFnc(numbers)
+```
+
+which is even quicker and simpler, but this is only because the function we have created could be automatically "vectorised" (i.e., we can just plug in a list and `R` knows that we want it to do the operation on all elements sequentially). Later we will need to work with custom functions that are not easily vectorised, and we will need to use `sapply`, in Labs 3 and 4 the latest.
+
+::: boxTask
+Run `?sapply` in the console and read a bit about the difference between the various versions of `apply` . It is fine if this seems a bit opaque right now, but getting some practice with the `?` operator is a very useful skill.
+:::
+
+## `replicate`
+
+The method `replicate` is a "shortcut" to using `sapply` if we just want to run a function a few times (but this function does not need an argument). This is often needed when we need to build up some vector following a certain rule. For example, let's say we want to simulate 15 dice throws, but we only want to record whether the die showed a 6. Using replicate, we can do this like this:
+
+```{r}
+thrownA6 = function(){return (sample(1:6, 1) == 6)}
+replicate(15, thrownA6())
+```
+
+::: boxTask
+Note that we are still writing this unnecessarily long (for pedagogical reasons). Find ways of making this expression even shorter, in one line, without ever defining the function `thrownA6`. You can consult `?replicate`.
+:::
+
+## Wrap up
+
+-   How loops operate
+-   How if and else statements operate
+-   How customised functions are constructed
+-   How to use `sapply` to run a function over a list of inputs.
+-   How to use `replicate` to create a vector following some pattern (often randomised).
+
+# Datasets
+
+## Loading datasets
+
+Datasets can be imported into the R workspace using one of four common methods:
+
+-Read a file into R, for example, using read.csv() to read a CSV (Comma Separated Values). -Import a data set embedded in a package. -Execute a database query to retrieve data. -Load a .RData file containing a data set previously saved by R, which raises the question of how that data was initially loaded.
+
+We have covered the first method earlier. Now let's explore importing data form packages.
+
+We can use `data()` command to find out what datasets are already loaded (due to the currently loaded foundation packages)
+
+```{r eval=FALSE}
+data()
+```
+
+## Viewing datasets
+
+There is a built-in data set called *warpbreaks*, which gives the number of warp breaks per loom with three variables:
+
+-   breaks: Numeric, the number of breaks
+-   wool: factor, the type of wool (A or B)
+-   tension: factor, the level of tension (L, M, H)
+
+let's take a look at it.
+
+```{r}
+warpbreaks
+```
+
+When dealing with a very large data set, it's often not necessary to view all the data at once. We can use `head()` or `tail()` to display the top or the bottom few lines of the data set to get a taste of it.
+
+The function will show 6 rows by default:
+
+```{r}
+head(warpbreaks)
+```
+
+Or we can specify the number of rows to display as well:
+
+```{r}
+tail(warpbreaks, n = 10)
+```
+
+## Summarising datasets
+
+When first examining a data set, it's typical to explore its descriptive statistics. The function `summary()` and `str()` provide an overview of the dataset's structure and summary statistics.
+
+```{r}
+summary(warpbreaks)
+```
+
+```{r}
+str(warpbreaks)
+```
+
+There are options to explore only a particular column that we are interested in. This is done via the `$` operator:
+
+```{r}
+# use mean() to find out the average
+mean(warpbreaks$breaks)
+
+# use table() to show the frequency of a categorical variable
+table(warpbreaks$tension)
+```
+
+## Plot the data
+
+A straightforward visualization usually can tell a lot.
+
+```{r}
+boxplot(breaks~tension, data = warpbreaks)
+```
+
+## Wrap up
+
+-   There are many datasets preloaded in R (some packages, *datasets* & *carData*, consist solely of these datasets)
+-   It is always a good idea to first gain an overall understanding of the structure and descriptive statistics of a data set as as part of the EDA(exploratory data analysis) process.
+
+# Data frames
+
+We have encountered data frame several times so far: read.csv() returns an Result as a data frame, and most built-in datasets in R are typically in this format as well.
+
+```{r}
+class(warpbreaks)
+```
+
+For tabular data, it's advisable to store it as a data frame in R, as many functions accept data frames to be passed via a `data =` argument.
+
+## Slice data frames
+
+There are various ways to select a subset from a data frame, we will only display a few here.
+
+Slicing is to select specific rows and columns from a data frame 'df' using the format df[row, column].
+
+```{r}
+# select the second row
+warpbreaks[2, ]
+
+# select the first and third column
+warpbreaks[, c(1,3)]
+
+# do not select the second column
+warpbreaks[, -2]
+
+# select by column names
+warpbreaks[, c("breaks", "tension")]
+
+# select the cell located at 5th row, 1st column
+warpbreaks[5, 1]
+
+# select rows that have values in breaks column that are greater than 25
+warpbreaks[warpbreaks$breaks>25, ]
+
+```
+
+## Append data frames
+
+If we can downsize data frames, we can surely upsize them too.
+
+Column-wise:
+
+```{r}
+# duplicate a data frame, so the change won't alter the original data
+df_col <- warpbreaks
+
+# add a new column called type, which combines wool and tension
+df_col$type <- paste0(warpbreaks$wool, warpbreaks$tension)
+df_col
+```
+
+Row-wise:
+
+```{r}
+# duplicate a data frame, so the change won't alter the original data
+df_row <- warpbreaks
+
+# add a 55th row that have values of 100, "A" and "L".
+df_row[55, ] <- list(100, "A", "L")
+df_row
+```
+
+We can also use `cbind()` or `rbind()` to combine multiple data frames into one.
+
+```{r}
+# create two data frames
+df1 <- data.frame(A = 1:3, B = 4:6)
+df2 <- data.frame(C = 7:9, D = 10:12)
+
+# combine two data frames by columns
+combined_columns <- cbind(df1, df2)
+
+# combine two data frames by rows
+# first, ensure df1 and df2 have the same column names for rbind() to work properly
+colnames(df2) <- colnames(df1)
+combined_rows <- rbind(df1, df2)
+
+combined_columns
+combined_rows
+```
+
+## Wrap up
+
+-   Datasets are often (but not always) data frames
+-   We use the square bracket `[]` for slicing a data frame
+-   Data frame can be merged or appended
+
+# dplyr
+
+The functions mentioned above are available in base R, meaning they can be used without requiring any additional libraries. However, for more sophisticated data manipulation tasks, the widely used `dplyr` package, a key component of the `tidyverse`, is often preferred by many R users.
+
+Now, we are going to reproduce what we have performed using base R functions with equivalent functions in `dplyr` package.
+
+```{r message=FALSE, warning=FALSE}
+# dplyr is a part from tidyverse. You may need to install the tidyverse first if you haven't already. 
+# install. packages('tidyverse')
+library(dplyr)
+
+# alternatively, load tidyverse as we may need the other libraries in it 
+library(tidyverse)
+```
+
+## The `%>%` "pipe"
+
+One important feature of dplyr is piping. Sometimes we have to "pipeline" something (a vector, a dataframe, or just a number) through multiple functions in sequence. For example: Say we have a vector that we want to apply three functions to. In principle we can do this like so:
+
+```{r}
+fnc1 = function(x){return (x-2)}
+fnc2 = function(x){return (x^2)}
+fnc3 = function(x){return (max(x))}
+
+vec <- c(-2,-1,0,1,2)
+vec1 <- fnc1(vec)
+vec2 <- fnc2(vec1)
+print(fnc3(vec2))
+```
+
+Now that is certainly possible, but a bit tedious. Also, we need to create many intermediate, temporary variables. Instead, we can use piping. This is to be read from left to right.
+
+```{r}
+vec %>% fnc1 %>% fnc2 %>% fnc3
+```
+
+Often we slightly organise piping like so to make reading a long pipe easier (not really necessary here, though).
+
+```{r}
+vec %>%
+  fnc1 %>%
+  fnc2 %>%
+  fnc3
+```
+
+## Slice and Filter
+
+`filter()` and `select()` are the functions we need in `dplyr` for slicing. `filter()` is used for row-wise, while `select()` deals with column-wise demands. If this code gives you an error, it is probably because MASS is loaded. MASS overwrites the `select` command with something else. (Annyoing, I know) In that case, change `select` to `dplyr::select` below. This specifies that you mean the `select` which is defined in the dplyr package.
+
+```{r}
+# select the second row
+warpbreaks %>% 
+  filter(row_number() == 2)
+
+# select the first and third column
+warpbreaks %>% 
+  select(breaks, tension) 
+# it is equivalent to not select the second column
+warpbreaks %>% 
+  select(-wool) 
+# it can also be done by column index
+warpbreaks %>% 
+  select(1, 3) 
+
+# select the cell located at 5th row, 1st column
+warpbreaks %>% 
+  filter(row_number() == 5) %>% 
+  select(1) 
+
+# select the rows with breaks are more than 25
+warpbreaks %>% 
+  filter(breaks > 25)
+
+```
+
+There is a subtle difference when we select a single cell. When we use `[]`, the base R slicing function, the result is coerced to the lowest possible dimension. If we are slicing a single column, the result would be returned as a vector, not a data frame any more. But when we are using the `filter()` and `select()`, it is data frame in and data frame out.
+
+```{r}
+class(warpbreaks[5, 1])
+
+warpbreaks %>% 
+  filter(row_number() == 5) %>% 
+  select(1) %>% 
+  class()
+```
+
+If we want to maintain the same format between input and output when we are using `[]`, solutions could be
+
+-   alter the `drop =` argument in `[]`, it is set to TRUE by default, change that into FALSE, and the dimension will remain the same.
+-   turn data frame into tibble[^5], which is a modern take on data frames.
+
+[^5]: <https://tibble.tidyverse.org/>
+
+```{r}
+warpbreaks[5, 1]
+warpbreaks[5, 1, drop = FALSE]
+
+warpbreaks_tbl <- as_tibble(warpbreaks)
+warpbreaks_tbl[5, 1]
+```
+
+## Append
+
+Column-wise: `mutate()` is the function in `dplyr` to create, modify and delete columns.
+
+```{r}
+# add a new column called type, it's the combination of wool and tension
+warpbreaks %>% 
+  mutate(type = paste0(wool, tension))
+```
+
+If we just want to add columns, we can also use `add_column()`.
+
+Row-wise:
+
+We can use `add_row()` to add rows to an existing data frame.
+
+```{r}
+warpbreaks %>% 
+  add_row(breaks = 100, wool = "A", tension = "L")
+```
+
+Notice those functions are not changing the original data set. If we take a look at warpbreaks, it still has 54 rows and 3 columns.
+
+```{r}
+dim(warpbreaks)
+```
+
+The result we observed after the piping process is just the snapshot of the outcome. If we wish to store the result, we should use `<-` to store the result as a variable.
+
+## Summarise
+
+Summarising allows us to create some kind of summary (to be specified) of a dataset. Try to understand what the following things do:
+
+```{r}
+# get a glimpse of the data, similar to str()
+warpbreaks %>% 
+  glimpse()
+
+# works on particular column
+warpbreaks %>% 
+  summarise(mean_breaks = mean(breaks),
+            median_breaks = median(breaks),
+            std_breaks = sd(breaks))
+
+warpbreaks %>% 
+  group_by(tension) %>% 
+  summarise(frequency_tension = n())
+
+# multiple columns
+warpbreaks %>% 
+  group_by(wool) %>% 
+  summarise(mean_breaks = mean(breaks),
+            median_breaks = median(breaks),
+            std_breaks = sd(breaks))
+```
+
+## Wrap up
+
+-   *dplyr* is a package for data manipulation and is part of the *tidyverse*
+-   `group_by()`, `summarise()`, `filter()`, `select()` and etc are the common functions we need to query a data frame.
+-   `mutate()`, `add_column()`, `add_row()` can append the data frame.
+
+# ggplot2
+
+You may have noticed that we reproduced all the process with *dplyr* from base R but not the plotting. This is because, within *tidyverse* package, *dplyr* is designed for data manipulation, while *ggplot2* is the library for visualization.
+
+In ggplot2, a plot is composed of multiple elements such as canvas, patterns, title, axes and legends, each of which can be individually controlled and adjusted as a distinct layer.
+
+## Layered graphic
+
+The following template is a common structure of a ggplot:
+
+```         
+ggplot(data = <DATA>) +
+  <GEOM_FUNCTION>(
+    mapping = aes(<MAPPINGS>),
+    stat = <STAT>,
+    position = <POSITION>
+  ) +
+  <COORDINATE_FUNCTION> +
+  <FACET_FUNCTION>
+```
+
+Use the warpbreaks data set as example:
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+boxplot1 <- ggplot(data = warpbreaks, # creates an empty graph using the warpbreaks data frame
+                   mapping = aes( # defines how variables in the data set are mapped to visual properties (aesthetics) of the plot
+                     x = tension, # the boxplot is grouped by tension 
+                     y = breaks # we want a vertical boxplot
+                   )) + 
+  geom_boxplot() # geometrical object that a plot uses to represent data, in this case, boxplot
+
+boxplot1
+```
+
+## Personalise the plot
+
+The plot above is made using default settings. We can personalise the plot by adjusting the settings:
+
+```{r}
+boxplot2 <-  boxplot1 + 
+  geom_boxplot( 
+    mapping = aes( 
+      fill = tension, # fill the box with color by tension group
+    ), 
+    alpha = 0.75, # set the transparency of the color in box
+    outlier.color = 'red', # set the color for outliers
+    outlier.shape = 18, # set the shape for outliers
+    outlier.size = 2.5 # set the size for outliers
+  ) +
+  
+  scale_fill_manual(
+    values=c("tomato", "#56B4E9", "#FCF4A3") # pick the color to fill "manually"
+  ) +
+  
+  labs(  # alter the labels and title
+    title = "Breaks vs Tension",
+    x = "Tension with T", # it was tension
+    y = "Breaks"
+  ) +
+  
+  # A classic-looking theme, with x and y axis lines and no gridlines.
+  theme_bw() +
+  
+  theme( # customise the non-data components of the plots with whole bunch of settings
+    plot.title = element_text(hjust = 0.5),  # center the title
+    
+    axis.text.x = element_text(
+      angle = 45, # change the orientation angle of the axis ticks
+      size = 14, # change the size of the axis ticks
+      face="bold.italic", # change the font face of the axis ticks
+      color="#993333" # change the color of the axis ticks
+    ),
+    
+    axis.ticks.length.y = unit(-0.5, "cm"), # set the direction and length of the ticks on y axis
+    axis.ticks.x = element_blank(), # hide the ticks on x-axis
+    
+    legend.position= c(0.65,0.9), # position the legend inside the plotting area
+    legend.direction="horizontal", # flatten the legend box
+    legend.background = element_rect( # customise the legend box
+      fill="lightgrey",
+      colour ="darkblue"
+    ),
+    
+    aspect.ratio = 1, # set the ratio of y/x to 1
+    
+    plot.background  = element_rect( # wrap the whole plot area with black dotted dash and grey background
+      colour = "black", 
+      linewidth = 1,
+      linetype = "dotdash",
+      fill = 'grey')
+  ) 
+
+boxplot2
+
+```
+
+Since ggplot is structured layer by layer, the order of those layers matters.
+
+::: boxTask
+What if we switch the `theme_bw()` part and `theme()` part, make `theme_bw()` the last layer?
+:::
+
+There are much much more can be tweaked, check the links provided in **lab0** for more detailed guidance of data visualisation with `ggplot2`.
+
+## Wrap up
+
+-   ggplot2: plotting with a grammar of graphics
+-   Since it is layered, order matters
+-   Pretty much every aspect of the plot can be adjusted
+
+# R markdown
+
+R Markdown is a file format for making dynamic documents with R. An R Markdown document is written in markdown (an easy-to-write plain text format). It can integrate code, results, and commentary. R Markdown documents can output various formats, such as PDFs, Word files, slideshows, and more. In fact, the page you are reading right now is a product of R markdown.
+
+::: boxNote
+If you would like to practice this section on with your device, it is better to create a `.rmd` file on your own and try the settings below. Or download the Rmd version of this lab from LEARN.
+:::
+
+If you have never used R markdown before, [Get started with R markdown](https://intro2r.com/get-started-with-r-markdown.html) is a good start. You may not be able to get the help through the typical way with `?`, but there are two cheat sheets available with RStudio. Go *Help* $\rightarrow$ *Cheat Sheets* $\rightarrow$ *R Markdown Cheat Sheets* or *R Markdown Reference Guide*, you may find answers to your questions about how to create a `.rmd` file there in most cases.
+
+## Code chunk settings
+
+The rmd file contains three main parts
+
+1.  A **YAML header** surrounded by ---s, it controls the output format of the rmd file.
+2.  **Chunks** of R code surrounded by \`\`\`, that's where you write the R code, each code chunk can be considered as an R script.
+3.  Text mixed with simple text formatting like `# heading` and `\_italics_`.
+
+We will be only covering a couple of very common *code chunk* settings here.
+
+### Default
+
+By default, the code in *code chunk* will be executed and the code chunk will be displayed in the output file along with its result(if there's any).
+
+setting: default
+
+-   run code: `T`
+-   display code: `T`
+-   display result: `T`
+
+```{r fig.cap= '*code is there, output is there*'}
+# run code, show code, show output
+boxplot2
+```
+
+### Result only
+
+Very often, we only need to display the result in our report. The reader may be only interested in the result, not the code. In this case, we still need to run the code and show its output, but the code itself could be hidden.
+
+setting: `echo=FALSE`
+
+-   run code: `T`
+-   display code: `F`
+-   display result: `T`
+
+```{r echo=FALSE, fig.cap= '*no code chunk, just result*'}
+# run code, hide code, show output
+boxplot2
+```
+
+### Code only
+
+If you only need to provide an explanation for your code, and displaying the result is not necessary, you can present the code as strings without the need for execution.
+
+setting: `eval=FALSE`
+
+-   run code: `F`
+-   display code: `T`
+-   display result: `F`
+
+```{r eval=FALSE}
+# do not run code, show code, no output
+boxplot2
+```
+
+### Run code, display nothing
+
+Some codes are unsung heroes behind the scene. They are constructed so that other codes can be run, they are more like a setting or pre-requisite to other code chunks.
+
+setting: `include=FALSE`
+
+-   run code: `T`
+-   display code: `F`
+-   display result: `F`
+
+```{r include=FALSE}
+boxplot3 <- boxplot2 + 
+  geom_point(data = warpbreaks %>% 
+               group_by(tension) %>% 
+               summarise(Mean = mean(breaks)), aes(x = tension, y = Mean)) 
+```
+
+```{r fig.cap= '*what happend?*'}
+boxplot3
+```
+
+What happened?
+
+Spot any difference here? It seems we have not assigned any object called *boxplot3* yet, but it can be called with three extra dots added compared to *boxplot2*. What we've done is that we added another layer on *boxplot2* to display the means of each tension group, but the piece of code chunk is not displayed. If you have downloaded the rmd file, you'll find that part of code there.
+
+### Figures format
+
+We can also use code chunk settings to control the format of the output image. If we put `fig.align='right', fig.height=6, fig.width=6, fig.cap="boxplot3"` into the chunk setting part, we will have a bigger plot with a caption that positions at the right.
+
+```{r fig.align='right', fig.height=6, fig.width=6, fig.cap="This is a caption."}
+boxplot3
+```
+
+## Wrap up
+
+-   R markdown is a powerful tool
+-   We can use code chunk settings to control the display of the code and its result
+
+::: boxNote
+You are expected to use rmd for computer labs, tutorials and assignments for this course from now on.
+:::
+
+*End of lab1*

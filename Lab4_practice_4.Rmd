@@ -1,0 +1,254 @@
+---
+title: "Lab_Week4_Practice"
+author: "Mahendher Thatikonda"
+date: "2024-08-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+set.seed(1)
+train_ind <- sample(1:506, size = 506*0.8)
+length(train_ind)
+not_train_ind <- setdiff(1:506, train_ind)
+?setdiff()
+valid_ind <- sample(not_train_ind, size = 51)
+
+df_train <- MASS::Boston[train_ind, ]
+df_valid <- MASS::Boston[valid_ind, ]
+df_test <- MASS::Boston[-c(train_ind, valid_ind), ]
+
+```
+
+```{r}
+??MASS::ptratio
+```
+```{r}
+library(MASS)
+View(Boston)
+head(Boston)
+```
+
+```{r}
+p <- ggplot(data = df_train, aes(x = rm, y = medv)) +
+  geom_point(aes(shape = factor(chas), fill = ptratio, size = age), alpha = 0.5) +
+  scale_shape_manual(values = c(22, 24), name = "chas") +
+  scale_fill_gradient(low = "yellow", high = "red")+
+  guides(shape = guide_legend(title.position = "right"),
+         size = guide_legend(title.position = "right"),
+         fill = guide_colorbar(title.position = "right")
+         )+
+  ylim(0, 50)
+```
+
+```{r}
+?matrix
+M1 <- matrix(data = c(1,2,3,4,5,6))
+M1
+#  specifies the size of the column in the matrix
+M2 <- matrix(data = c(1,2,3,4,5,6), ncol = 2)
+M2
+# the elements can be arranged row-wise as well
+M3 <- matrix(data = c(1,2,3,4,5,6), nrow = 3, byrow = T)
+M3
+```
+
+```{r}
+M23 <- M2 + M3
+```
+
+```{r}
+TransposeA <- t(M23)
+```
+```{r}
+# how to calculate Matrix
+M3 %*% t(M2)
+M3
+```
+?diag
+```{r}
+diag(3)
+det(diag(3))
+m <- t(M3) %*% M2
+det(m)
+
+solve(m)
+det(3*m)
+```
+
+```{r}
+?tibble:?add_column
+library(tibble)
+A <- df_train %>% 
+  # select the explanatory variables
+  dplyr::select(c(age, chas, ptratio, rm)) %>% 
+  # add a column with 1 for all entries
+  add_column(., X0 = 1, .before = 1) %>% 
+  as.matrix()
+
+
+#now response variables
+y <- df_train %>% 
+  # select the response variables
+  dplyr::select(medv) %>% 
+  as.matrix()
+
+nrow(y) + nrow(A)
+```
+
+```{r}
+A
+y
+```
+
+```{r}
+
+b = solve(t(A) %*% A) %*% t(A) %*% y
+```
+```{r}
+mlr.fit <- lm(formula = medv ~ age + chas + ptratio + rm , data = df_train)
+x["ptratio"] <- mlr.fit$coefficients
+summary(mlr.fit)
+```
+
+```{r}
+TSS <- sum((df_train$medv - mean(df_train$medv))^2)
+```
+# The TSS Value is 33690.49
+```{r}
+x
+df_train_fitted <- df_train %>% 
+  mutate(fitted_medv = b[1] + b[2] * x["age"] + b[3] * x["chas"] + b[4] * x["ptratio"] + b[5] *x["rm"] )
+```
+
+# to calculate the ESS Value
+```{r}
+ESS <- sum((df_train_fitted$fitted_medv - mean(df_train_fitted$medv))^2)
+```
+
+## the obtained ESS vale is 677722.7
+
+```{r}
+RSS <- sum((df_train_fitted$fitted_medv - df_train_fitted$medv)^2)
+```
+# the RSS value obtained is 711413.1
+
+```{r}
+Adjst_RSS_i <- RSS/(nrow(df_train)-4-1)
+Adjst_RSS_f <- TSS/(nrow(df_train)-1)
+
+Adjst_Rss_fi <- Adjst_RSS_i/Adjst_RSS_f
+Adjusted_R_sqr <- Adjst_Rss_fi - 1
+```
+
+```{r}
+summary(mlr.fit)
+```
+# now use the testing dat to calculate MSE
+```{r}
+y_hat_test <- predict(mlr.fit, newdata = df_test)
+
+MSE <- mean((df_test$medv - y_hat_test)^2)
+
+```
+```{r}
+mlr.fit2 <- lm(formula = medv ~ age + chas + ptratio +I(rm^2), data = df_train)
+
+```
+
+## Approches to select the quality of the model
+```{r}
+# all the possible features
+features <- c("age", "chas", "ptratio", "rm")
+
+# number of features in the model, start with 0, the null model
+p <- 2
+
+# vector to store the best features in order, for the null model, we assign it as 1
+best_features <- vector(length = length(features) +1)
+
+# vector to store the MSEs of the best models in each complexity on training set
+MSE_train_best <- vector(length = length(features) +1)
+
+# vector to store the MSEs of the best models in each complexity on validation set
+MSE_valid_best <- vector(length = length(features) +1)
+```
+
+```{r}
+# for the null model, we set feature as 1
+predictor <- c("1")
+
+# concatenate the response with the predictor to generate a formula
+formula <- paste("medv ~", predictor, sep = " ")
+
+# use lm() to fit the model
+fit_models <- lm(formula = formula, data = df_train)
+
+# find the MSE
+MSEs_train <- mean((fit_models$residuals)^2)
+
+# store the minimum MSE, only one value at this stage though
+MSE_train_best[1] <- min(MSEs_train)
+
+# find the MSE on validation set
+MSE_valid_best[1] <- mean((predict(fit_models, newdata = df_valid) - df_valid$medv)^2)
+
+
+
+
+```
+
+```{r}
+best_features[1] <- predictor
+```
+
+```{r}
+
+p <- 1
+
+# use combn() to generate all combinations of features, take p at a time, return the result as a list
+predictor <- combn(features, p, simplify = FALSE)
+
+# generate formula respectively
+formula <- sapply(predictor, function(x) paste("medv", "~", paste0(x, collapse = "+"), sep = " "))
+
+# fit model respectively
+fit_models <- lapply(formula, function(x) lm(x, data = df_train))
+
+# get MSE respectively
+MSEs_train <- sapply(1:length(fit_models), function(x) mean(fit_models[[x]]$residuals^2))
+
+MSEs_train
+which.min(MSEs_train)
+```
+
+```{r}
+
+# the feature results the smallest MSE will be stored
+best_features[1 + p] <-predictor[[which.min(MSEs_train)]]
+
+# stored the smallest MSE
+MSE_train_best[1 + p] <- min(MSEs_train)  
+
+# find out the best performed feature and store its MSE on validation set
+MSE_valid_best[1 + p] <- mean((predict(fit_models[[which.min(MSEs_train)]], newdata = df_valid) - df_valid$medv)^2)
+
+```
+```{r}
+
+
+# we will need two features now
+p = 2
+
+# filter out any feature combination that does not contain the stored best feature from previous step
+predictor <- Filter(function(x) all(best_features[2:p] %in% x), combn(features, p, simplify = FALSE))
+```
+
+```{r}
+
+
+
+```
+

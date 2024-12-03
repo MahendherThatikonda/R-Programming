@@ -1,0 +1,84 @@
+---
+title: "Hand measurements"
+author: "Philipp Wacker"
+date: "2024-07-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+load libraries
+
+```{r}
+library(ggplot2)
+```
+
+## Hand measurements
+
+```{r}
+span <- c(19, 18, 21, 20.7, 18.5, 21.5, 22)
+cubit <- c(45, 45.5, 46.2, 46, 39, 43, 49)
+df_hand <- data.frame(span = span, cubit = cubit)
+write.csv(df_hand, file="measurements.csv")
+```
+
+Compute the mean handspan by
+
+$mean(span) = \frac{1}{N}\sum_{i=1}^N s_i$
+
+```{r}
+mean_span <- sum(span)/length(span)
+```
+
+Next we compute the variance
+
+$var(span) = \frac{1}{N-1}\sum_{i=1}^N (s_i - mean(span))^2$
+
+```{r}
+var_span <- sum((span - mean_span)^2) /( length(span) - 1)
+sd_span <- sqrt(var_span)
+```
+
+Plot `span` vs `cubit`:
+
+```{r}
+ggplot(data=df_hand, aes(x=cubit, y=span)) +
+  geom_point()
+```
+
+Investigate correlation between these variables
+
+```{r}
+cov_span_cubit <- NULL
+corr_span_cubit <- NULL
+```
+
+## Building confidence intervals for the estimator $\hat \mu$ of handspan
+
+We are going to estimate the mean handspan with the unbiased mean estimator
+
+$$ \hat \mu = \frac{1}{n} \sum_{i=1}^n x_i. $$
+
+A confidence interval for $\mu$ at confidence level $1-\alpha=$ 95% is computed via
+
+$$ \left[\hat \mu - \underbrace{t_{1-\alpha/2}(n-1) \cdot \frac{\sqrt{ \widehat{\sigma^2}}}{\sqrt n}}_{=:~ \tau},~ \hat \mu + t_{1-\alpha/2}(n-1) \cdot \frac{\sqrt{ \widehat{\sigma^2}}}{\sqrt n}  \right]  $$
+$$[ \hat \mu - t(1-\alpha/2, n-1)*\sqrt{\hat \sigma^2/n}, \hat \mu + t(1-\alpha/2, n-1)*\sqrt{\hat \sigma^2/n}]   $$
+
+```{r}
+alpha = 0.02
+n <- nrow(df_hand)
+hatmu <- mean_span
+tau <- qt(1-alpha/2, n-1)*sqrt(var_span)/sqrt(n)
+print(c(hatmu - tau, hatmu + tau))
+```
+The `r 100*(1-alpha)`% confidence interval for $\mu$ is [`r signif(c(hatmu - tau, hatmu + tau), 4)`]
+
+```{r fig.height=2, fig.width=6}
+ggplot(data=df_hand) +
+  geom_point(aes(x=span, y=replicate(length(span), 0))) + 
+  geom_point(aes(x=hatmu, y=0), color="red", size=3) +
+  geom_errorbarh(aes(xmin = hatmu-tau, xmax = hatmu+tau, y=0))
+```
+

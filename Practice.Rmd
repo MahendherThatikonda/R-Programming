@@ -1,0 +1,154 @@
+---
+title: "Untitled"
+author: "Mahendher Thatikonda"
+date: "2024-09-01"
+output: 
+html_document: 
+    toc: yes
+    number_sections: yes
+    toc_float: yes
+    code_download: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+getwd()
+setwd("C:/Users/lenovo/Desktop/STAT 462 Data Mining/Week_5")
+```
+
+```{r}
+library(MASS)
+library(dplyr)
+```
+
+For this lab, we are going to work with Boston Dataset,
+
+```{r}
+Boston
+```
+
+```{r}
+df_boston <- Boston %>% 
+  mutate(medv_new = case_when(medv >= median(medv) ~ 1,
+                             medv < median(medv) ~ 0))
+```
+
+```{r}
+ggplot(data = df_boston, aes(x = rm, y = factor(medv_new))) + 
+  geom_jitter(shape = 21, alpha = 0.75, size = 3, height=0.1) +
+  scale_y_discrete(name = "medv_new",
+                   labels = c("0(Low)", "1(High)"))
+
+```
+
+Now we have to calculate the Probability $Pr(medv\_new =1|rm)$
+
+The probability of being Class 1 is
+
+$g_1(x) =\mathbb P(G=1|X=x) = \frac{\exp(b_0+b_1 x)}{1+\exp(b_0+b_1 x)}$
+
+Now the probability of being class 0 is
+
+$g_0(x)=\mathbb P(G=0|X=x) = \frac{1}{1+\exp(b_0+b_1 x)}$
+
+Now we have to find the optimal pair of b0 and b1 from the training set, ##Setup first split the dataset into a training and test set in the ratio of 80:20
+
+```{r}
+nrow(Boston)
+set.seed(12)
+sampl_iter <- sample(1:nrow(Boston),0.8*nrow(Boston))
+df_boston_train <- df_boston[sampl_iter,]
+df_boston_test <- df_boston[-sampl_iter,]
+```
+
+```{r}
+df_boston_train
+```
+
+```{r}
+df_boston_test
+```
+
+## Now we estimate coefficients by Hand,
+
+we try to find $\hat b_0$ and $\hat b_1$ such that estimated $\hat {g_1(x)}$ yields a number closer to 1 for "High" *medv_new* and a number closer to 0 for low *medv_new*.This can be formalized into a likelihood function
+
+\$\$\$\$\\begin{split}\\ell(b_0,b_1) &= \\prod\_{i=1}\^n \\left[ g_1(x_i; b_0, b_1) \\right]\^{y_i} \\cdot \\left[ 1 - g_1(x_i; b_0, b_1) \\right]\^{1-y_i} \\\\ &= \\prod\_{i: y_i=1}g_1(x_i; b_0, b_1) \\cdot \\prod\_{i: y_i=0} (1 - g_1(x_i; b_0, b_1))\\end{split}\$\$\$\$
+
+```         
+The pair that maximises $\ell(b_0,b_1)$ is the optimal value $(\hat b_0,\hat b_1)$ we are looking for
+```
+
+```         
+If we apply logarithm to both side of the likelihood function, we get: $$ \log(\ell(b_0,b_1)) = \sum_i (y_i(b_0 + b_1 x_i) - \log\left(1 + \exp(b_0 + b_1 x_i)\right))$$
+```
+
+$$
+\log(\ell(b_0,b_1)) = \sum_i (y_i(b_0 + b_1 x_i) - \log\left(1 + \exp(b_0 + b_1 x_i)\right))
+$$
+
+```         
+We can use the function `optim()` in R to search the optimal coefficients, for example: if we want to find the $x$ that would return the optimal value for $f(x) = x^2-2x+1$ and we start searching from $x=-500$ 
+```
+
+$f(x) = x^2-2x+1$ and we start searching for $x=-500$
+```{r}
+func <- function(x) {  
+  x^2 - 2 * x + 1
+}
+```
+
+```{r}
+result <- optim(par = -500, fn = func, method = "BFGS")
+```
+The best set of parameters can be found through `result$par`
+```{r}
+result$par
+```
+
+Notice that, `optim()` performs the minimisation by default, if we want to find the maximiser for our likelihood function, we can either set `fnscale` a negative value in `control` list (see `?optim()`) or apply negation to our log-likelihood and then search for minimum.
+
+```{r}
+result <- optim(par = -500, fn = func, method = "BFGS",control = list(fnscale = -1))
+?optim
+result$par
+```
+
+```{r}
+negloglikelihood <- function(b){
+  # explanatory variable
+  x = df_boston_train$rm
+  # response variable
+  y = df_boston_train$medv_new
+  
+  # likelihood function value
+  -sum(y*(b[1]+b[2]*x) - log(1+exp(b[1] + b[2])))
+}
+
+res <- optim(par = c(0, 0), fn = negloglikelihood(), gr = NULL, method = 'BFGS')
+x <- 5
+```
+

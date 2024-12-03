@@ -1,0 +1,386 @@
+---
+title: "STAT462 Computer Lab 3"
+subtitle: "Simple Linear Regression"
+author: "Speedy Jiang"
+output:
+  html_document: 
+    toc: yes
+    number_sections: yes
+    toc_float: yes
+---
+
+```{=html}
+<style>
+.boxTask {
+background-color: lightblue;
+color: black;
+border: 2px solid black;
+margin: 5px;
+padding: 5px;
+font-style: italic;
+}
+
+
+.boxNote {
+background-color: Tomato;
+color: black;
+border: 2px solid black;
+margin: 5px;
+padding: 5px;
+}
+
+.fill-in-blank {
+background-color: lightyellow;
+border: 2px solid #6f2c87;
+}
+
+</style>
+```
+```{r setup, include = FALSE}
+Sys.setenv(LANG = "en")
+knitr::opts_chunk$set(eval=FALSE)
+library(MASS)
+library(tidyverse)
+```
+
+In this lab, We will compare the performance between a $k$-NN regression model with a given $k$ and a simple linear regression model with the coefficients computed by ourselves.
+
+::: fill-in-blank
+The normal code blocks are with grey background, but some of the codes are not complete, you will need to replace the "\_\_\_\_" part with your own code to run it smoothly, those code blocks are styled like this one.
+:::
+
+# Set up
+
+We will use the `Boston` dataset from the `MASS` library. It contains 506 entries and 14 columns. Every row corresponds to a specific suburb in Boston, and summarises statistics of dwellings in this suburb. The `medv` column is our target response, it is the median value of owner-occupied homes in \$1000s in a given suburb. The other explanatory variables include:
+
+-   `crim`: per capita crime rate of suburb.
+-   `rm`: the average number of rooms in suburb
+-   `zn`: proportion of residential land zoned for lots over 25,000 sq.ft.
+-   `indus`: proportion of non-retail business acres in suburb.
+-   `chas`: Charles River dummy variable (= 1 if tract bounds river; 0 otherwise).
+-   `black`: A measure for the proportion of Black people in this suburb. Here we already see an example of sensitive, and possibly racially discriminating features in a dataset. If we use this dataset to train an algorithm valuing properties in historically segregated and redlined suburbs, we risk perpetuating discriminatory practices. An ethical Data Scientist needs to be aware of biases in their datasets, and reflect on how to respond to them. For now we focus on simple linear regression of `medv` from `rm` and we will not use this feature.
+-   ... see `?Boston` for more details.
+
+We will investigate the relationship between `rm` (average number of rooms per dwelling) and `medv` today, by splitting the original dataset into training and testing set with the ratio of 8:2, then compute models on the training set and evaluate their performance on the testing set.
+
+```{r eval = TRUE}
+set.seed(1)
+train_ind <- sample(1:506, size = 506*0.8)
+
+df_train <- MASS::Boston[train_ind, ]
+df_test <- MASS::Boston[-train_ind, ]
+```
+
+::: boxNote
+See how we define the test set `df_test` with a clever indexing trick? Putting a minus sign in front of a vector with indices *excludes* these when indexing.
+:::
+
+::: boxTask
+Give it a go:
+
+Explore the dataset with `head()`, `str()`, `summary()`, etc to get a general idea about the dataset. For example, whether houses bound the river are more valuable or less? Which statistics are you going to use to support your theory?
+:::
+
+# First impression
+
+To identify trend, let's visualise our feature (`rm`) and response (`medv`) with a scatter plot.
+
+```{r eval = TRUE}
+p <- ggplot(data = df_train, aes(x = rm, y = medv)) +
+  geom_point(color = "black", alpha = 0.3) +
+  ylim(0, 50)
+p
+```
+
+The pattern fits to what we could call common sense, i.e., suburbs where houses tend to have more rooms tend to be associated with higher property values.
+
+> Try to read this: What is a property with 6 rooms worth typically? Note that this is not so clear-cut: `medv` records a suburb's median worth, not an individual house's. Still, this is all we can do for now.
+
+::: boxTask
+Give it a go:
+
+Visualise other variables, any other features also have the positive association?
+:::
+
+# Compute models
+
+## $k$-Nearest-Neighbors
+
+Suppose we have pairs like $(x_i, y_i)$ in our dataset, $x_i$ is the explanatory variable and $y_i$ is the response. If we are given a new data point $x^\star$, how do we estimate the corresponded $y^\star$? We first measure the distance between $x^\star$ and each $x_i$, then find $k$ training data points with the smallest distances to $x^\star$ as neighbors, the $y^\star$ can be estimated as the average of all $y_i$s selected. $$\hat{y^\star} := \frac{1}{k}\Sigma_{i=1}^{k} y_i $$ If we set $k=21$ and wrap the process with our training set, we will have:
+
+```{r include=FALSE, eval=TRUE}
+# provide the x of a new point, get the corresponded y estimation
+kNN21 <- function(x){
+  neighborhood_vals <- df_train %>% 
+    # generate distance between new x and each existing x
+    mutate(dist = abs(rm-x)) %>% 
+    # sort the distance 
+    arrange(dist) %>% 
+    # subset the first k rows
+    slice(1:21) %>% 
+    # medv is our target response
+    select(medv) 
+  
+  # take the average response as the estimate
+  return (sum(neighborhood_vals)/21)
+}
+```
+
+```{r class.source="fill-in-blank"}
+# provide the x of a new point, get the corresponded y estimation
+kNN21 <- function(x){
+  neighborhood_vals <- df_train %>% 
+    # generate distance between new x and each existing x
+    mutate(dist = abs(rm-x)) %>% 
+    # sort the distance 
+    arrange(dist) %>% 
+    # subset the first k rows
+    slice(1:____) %>% 
+    # medv is our target response
+    select(medv) 
+  
+  # take the average response as the estimate
+  return (sum(neighborhood_vals)/21)
+}
+```
+
+Now we can answer the question above, a dwelling with 6 rooms values \_\_\_\_\_\_\_ according to our $k$-NN regression model.
+
+```{r eval=FALSE, include=TRUE}
+kNN21(6)
+```
+
+::: boxTask
+Give it a go:
+
+Will you be able to modify the function to make it more general for any $k$ or/and any data frame?
+:::
+
+## Simple Linear Regression (the pedestrian way)
+
+Another regression we have covered by now is simple linear regression.
+
+If we know the $\hat b_0$ and the $\hat b_1$, when give the $x^\star$, the feature of a new data point, then it's response can be estimated as:
+
+$$\hat y^\star = \hat b_0 + \hat b_1 \cdot x^\star$$ While $\hat b_1 = \frac{Cov(x,y)}{Var(x)} = \frac{\Sigma_{i=1}^{n}(x_i-\bar{x})(y_i-\bar{y})}{\Sigma_{i=1}^{n}(x_i-\bar{x})^2}$ and $\hat{b_0} = \bar{y} - \hat b_1 \cdot \bar{x}$
+
+If we recall lab2, we can get this pair of coefficients with R basic functions:
+
+```{r include=FALSE, eval=TRUE}
+b1 <- sum((df_train$rm - mean(df_train$rm)) * (df_train$medv - mean(df_train$medv))) / sum((df_train$rm - mean(df_train$rm))^2)
+
+b0 <- mean(df_train$medv) - b1 * mean(df_train$rm)
+```
+
+```{r class.source="fill-in-blank"}
+b1 <- sum((df_train$____ - mean(df_train$____)) * (df_train$____ - mean(df_train$____))) / sum((df_train$____ - mean(df_train$____))^2)
+
+b0 <- mean(____) - ____ * mean(____)
+```
+
+Back to our question, a dwelling with 6 rooms values \_\_\_\_\_\_\_ according to our simple linear regression model.
+
+```{r}
+b0 + b1 * 6
+```
+
+How different are these two results, which model is more trust worthy?
+
+# Visualise the model
+
+Can we make a judgement based on the visualisation of these two models?
+
+`geom_function()` is one option to plot a custom function and if we know the b1 (aka. slope) and b0 (aka. intercept), we can plot the regression line with `geom_abline()`.
+
+```{r class.source="fill-in-blank"}
+# p is the plot with the scatter layer
+p + 
+  # add a layer for kNN21 model
+  geom_function(fun = function(x) {sapply(x, kNN21)}, aes(col = "k-NN")) +
+  # add a layer for SLR model
+  geom_abline(aes(slope = ____, intercept = ____, col = "SLR" ), show.legend = FALSE) +
+  # add a legend for description
+  scale_colour_manual(name = "Model fit", values = c("red", "blue"))
+```
+
+When there are more data points (*rm* between 5.5 and 7.5), these two models tend to have similar estimation, but they are not to close outside this range.
+
+We need to set a standard to evaluate the performance.
+
+::: boxTask
+Give it a go:
+
+We used `geom_function()` and `geom_abline()` to draw these two function curves here, try some other methods for eg. `stat_function()`, `geom_line()` or `geom_smooth()`. Find a process suits you the best.
+:::
+
+# Evaluate performance
+
+## Goodness-of-fit
+
+We use the $R^2$ to quantify how much of the variation in the data is being captured/explained by the regression model. If it close to 1, we consider it's a good model.
+
+$R^2$ is the ratio between explained sum of squares -- *ESS* and total sum of squares -- *TSS*, $R^2 = \frac{ESS}{TSS}$. *ESS* can be represented as $\Sigma_{i=1}^{n} (\hat{y_i} - \bar{y})^2$ and total sum of squares is $\Sigma_{i=1}^{n} (y_i - \bar{y})^2$.
+
+The *TSS* is a "constant" regardless the model.
+
+```{r}
+TSS <- sum((df_train$medv - mean(df_train$medv))^2)
+```
+
+Let's find out the *ESS* for both models, we'll need the predict values first.
+
+```{r eval=TRUE}
+pred_knn <- sapply(X = df_train$rm, FUN = kNN21)
+pred_slr <- b0 + b1 * df_train$rm
+```
+
+```{r class.source="fill-in-blank"}
+ESS_knn <- sum((____ - mean(df_train$medv))^2)
+ESS_slr <- sum((____ - mean(df_train$medv))^2)
+```
+
+Now, we can get the ratio between *ESS* and *TSS*, which of them has the better performance?
+
+::: boxNote
+The higher $R^2$ here indicates that more variation of the response in **df_train** can be explained by the explanatory variable, can we draw the conclusion that it is the better model than it's counterpart?
+:::
+
+## (Root) Mean Squared Error
+
+The **mean squared error** (MSE) is often used to measure the performance of a model. It is the average squared difference between the estimated values and the actual values. Lower the MSE means smaller the difference between prediction and actual value, thus better the model. RMSE is the root of the mean squared error.
+
+$$MSE = \frac{1}{n_{test}}  \sum_{i=1}^{n_{test}} (y_i -\hat{y_i})^2$$
+
+We shall calculate the MSE on the **testing set**.
+
+```{r class.source="fill-in-blank"}
+pred_test_knn <- sapply(X = ____$rm, FUN = kNN21)
+
+MSE_knn = mean((____ - ____)^2)
+```
+
+```{r eval=FALSE, include=FALSE}
+pred_test_slr <- b0 + b1 * df_test$rm
+
+MSE_slr = mean((df_test$medv - pred_test_slr)^2)
+```
+
+The smaller the MSE, the better the model, which model is better?
+
+::: boxTask
+Give it a go:
+
+The performance between the simple linear model and $k-$NN ($k=21$) model are relatively close to each other, try some other $k$ values, can you find a better one?
+:::
+
+# Intervals
+
+## Confidence intervals for $b_1$
+
+The confidence intervals for $b_1$ can be calculated as
+
+$$ b_1 \in \left[ \hat b_1 - t_{1- \alpha/ 2}(n-2)\cdot \mathrm{se}(\hat b_1), \hat b_1 + t_{1-\alpha/ 2}(n-2)\cdot \mathrm{se}(\hat b_1) \right]$$
+
+where
+
+-   $t_{1- \alpha/ 2}(n-2)$ is the $1- \alpha/ 2$-quantile of a t-distribution with $n - 2$ degrees of freedom and
+-   $\mathrm{se}(\hat b_1) = \sqrt{\frac{1}{n-2}\cdot \frac{\sum_{i=1}^n (y_i - \hat y_i)^2}{\sum_{i=1}^n (x_i - \mathrm{mean}(\underline x))^2} }$
+
+(Note that $\sum_{i=1}^n (y_i - \hat y_i)^2 = TSS - ESS$, also called *RSS*, "residual sum of squares"). And we already have the *TSS* and *ESS* calculated from previous section.
+
+We will use the common confidence level, $\alpha = 0.05$.
+
+```{r class.source="fill-in-blank"}
+alpha <- ____
+n <- length(df_train$____)
+t <- qt(____, ____)
+```
+
+Apply the formula for $\mathrm{se}(\hat b_1)$
+
+```{r class.source="fill-in-blank"}
+se_b1 <- sqrt(1/(n - 2) * (TSS - ESS_slr) / sum((____ - ____)^2))'
+```
+
+So the lower limit and upper limit of confidence interval for $b_1$ are:
+
+```{r}
+b1_lower <- b1 - t * se_b1
+b1_upper <- b1 + t * se_b1
+```
+
+::: boxTask
+Is $b_1$ significant at $\alpha = 0.05$ in this case?
+:::
+
+## Prediction Intervals
+
+The coefficients have uncertainty, if we are using them to estimate the response of a new datapoint's feature, we shall expect somewhat of uncertainty as well.
+
+Suppose $y^\star$ is the predicted response for $x^\star$, a new datapoint's feature, a $100\cdot(1-\alpha)\%$ prediction interval for $x^\star$ is $[\hat y^\star - \tau, \hat y^\star + \tau]$, where $$ \tau = t_{1-\alpha/2}(n-2) \sqrt{\frac{RSS}{n-2}} \sqrt{1 + \frac{1}{n} + \frac{(x^\star - \mathrm{mean}(\underline x))^2}{\sum_{i=1}^n(x_i - \mathrm{mean}(\underline x))^2}}.$$
+
+Now, let's try to give a prediction intervals for our question: predict the value of a dwelling with 6 rooms values.
+
+Calculate the point estimate $\hat y^\star$:
+
+```{r class.source="fill-in-blank"}
+y_hat <- ____ * 6 + ____
+```
+
+We can inherit the *t*, *RSS* and *n* from last section.
+
+```{r class.source="fill-in-blank"}
+tau <- t * sqrt((____ - ____) / (n - 2)) * sqrt(1 + 1 / n + (____ - ____)^2 / sum((____ - ____)^2))  
+```
+
+Thus, the lower and upper limit for the prediction intervals are:
+
+```{r}
+y_hat_lower <- y_hat - tau
+y_hat_upper <- y_hat + tau
+```
+
+::: boxTask
+Give it a go:
+
+Will you be able to write a function to get the prediction intervals for *this*(or *any*) simple linear regression model, if the feature of a new datapoint and the confidence level are given?
+
+How would you visualise the intervals?
+:::
+
+# Built-in functions
+
+As you may notice, there is no problem for us to use base R functions for those calculation so far, but the codes are getting longer and cumbersome. We can write our own functions but there are functions existed to make our job easier. For instance: `lm()`.
+
+Function `lm()` is used to fit linear models, provide the data frame and indicates response and feature(s), it can return us the regression model.
+
+```{r}
+lm.fit <- lm(formula = medv ~ rm, data = df_train)
+```
+
+The coefficients can be extracted as:
+
+```{r}
+lm.fit$coefficients
+
+# alternatively
+coef(lm.fit)
+```
+
+Is it the same with your *manual* results? Try `summary(lm.fit)` and find the $R^2$.
+
+```{r}
+summary(lm.fit)
+```
+
+::: boxTask
+Give it a go:
+
+There are functions for $k$-NN regression as well, eg. `knn.reg()` from `FNN` library or `knnreg()` from `caret` library, try these functions and compare with our "manual" result.
+:::
+
+Is number of rooms a good indicator for house price? Is there any other better features in the dataset can yield better estimation?
+
+The house price is surely not associated with single feature only, what shall we do when multiple dimensions need to be considered? Stay tuned for next week and lab4.
+
+*End of lab3*

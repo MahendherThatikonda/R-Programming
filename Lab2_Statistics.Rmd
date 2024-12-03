@@ -1,0 +1,344 @@
+---
+title: "STAT462 Computer Lab 2"
+subtitle: "Statistics"
+author: "Speedy Jiang"
+output:
+  html_document: 
+    toc: yes
+    number_sections: yes
+    toc_float: yes
+    code_download: true
+---
+
+```{=html}
+<style>
+.boxTask {
+background-color: lightblue;
+color: black;
+border: 2px solid black;
+margin: 5px;
+padding: 5px;
+font-style: italic;
+}
+
+.boxNote {
+background-color: Tomato;
+color: black;
+border: 2px solid black;
+margin: 5px;
+padding: 5px;
+}
+
+.fill-in-blank {
+background-color: lightyellow;
+border: 2px solid #6f2c87;
+}
+</style>
+```
+```{r setup, include = FALSE}
+Sys.setenv(LANG = "en")
+knitr::opts_chunk$set(eval=FALSE)
+
+```
+
+There are two parts in this lab, the first part is to explore the way to compute some descriptive statistics but without the R built-in functions. The second the part is about to set up a process to estimate the mean of a population by sampling with R.
+
+::: fill-in-blank
+The normal code blocks are with grey background, but some of the codes are not complete, you will need to replace the "\_\_\_\_" part with your own code to run it smoothly, those code blocks are styled like this one.
+:::
+
+# Descriptive statistics (on foot)
+
+We will try to explore the way to compute the following statistics without the built-in function and compare our solutions with the built-in ones in this part:
+
+-   mean of a vector $\underline x$ is $\mathrm{mean}(\underline x) = \frac{1}{n} \sum_{i=1}^n x_i$.
+-   variance of a vector $\underline x$ is $\mathrm{var}(\underline x) = \frac{1}{n-1} \sum_{i=1}^n (x_i-\mathrm{mean}(x))^2$.
+-   standard deviation of a vector $\underline x$ is $\mathrm{sd}(\underline x) = \sqrt{\mathrm{var}(\underline x)}$.
+-   covariance of two vectors $\underline x,\underline y$ of *same length* is $\mathrm{cov}(\underline x,\underline y) = \frac{1}{n-1}\sum_{i=1}(x_i-\mathrm{mean}(\underline x))\cdot (y_i-\mathrm{mean}(\underline y))$.
+-   correlation of two vectors $\underline x,\underline y$ of *same length* is $\mathrm{corr}(\underline x,\underline y) = \frac{\mathrm{cov}(x,y)}{\mathrm{sd}(\underline x) \cdot \mathrm{sd}(\underline y) }$ and is between $-1$ and $1$.
+
+You can always compute any of these numbers in essentially three ways. Let's say you want to compute the mean of $\underline x = (1,2,3)$.
+
+1.  "Manually": Take a piece of paper and a pencil, and work out the computation by hand: $\mathrm{mean}(\underline x) = \tfrac13(1+2+3) = \frac{6}{3} = 2$.
+
+2.  "Pedestrian": Do the same computation in R, e.g., type in `(1+2+3)/3` to get the result.
+
+3.  "Racecar": Use R's built-in functions: `mean(c(1,2,3))`.
+
+Of course, option 3 will usually be the fastest and definitely accurate option. But, the pedagogical approach taken in this course is that we first do everything ourselves so we can get a deeper understanding of what is going on, so we start with either option 1 or 2 (sometimes both).
+
+We will be investigating the following vectors:
+
+```{r eval=TRUE}
+set.seed(1)
+x <- rnorm(10)
+y <- rnorm(10)
+
+print(x)
+print(y)
+```
+
+## Mean
+
+Mean: $\mathrm{mean}(\underline x) = \frac{1}{n} \sum_{i=1}^n x_i$.
+
+To get the average of a vector, we need to know the *sum* of all the elements and the *quantity* of them. In R, we can achieve those by using the function `sum()` and `length()`.
+
+```{r eval=TRUE}
+pedestrian_mean_x <- sum(x)/length(x)
+pedestrian_mean_x
+```
+
+This corresponds to the "pedestrian way" of computing this in R.
+
+In R, the built-in function (the "racecar way") to find the arithmetic mean is `mean()`.
+
+We can use `all.equal()` here to test if the manual result is (nearly) equal to the built-in function.
+
+```{r eval=TRUE}
+all.equal(pedestrian_mean_x, mean(x))
+```
+
+That's a good sign.
+
+::: boxNote
+Sometimes `A == B` may return the result that we are not expecting.
+
+The floats is not always stored exactly as we want, the best we can get is the closest available approximation. If we force to display $\frac{1}{5}$ as a float in 20 decimal places, we are expecting 19 `0`s after `2`, but in fact... try `sprintf("%.20f", 1/5)`.
+
+By default, the tolerance of `all.equal()` is `1.5e-8`, it can be changed by the argument `tolerance =`. So in our case, we consider two values are (nearly) the same if the difference between them is no greater than $1.5\times10^{-8}$.
+:::
+
+## Variance
+
+Variance: $\mathrm{var}(\underline x) = \frac{1}{n-1} \sum_{i=1}^n (x_i-\mathrm{mean}(x))^2$.
+
+The variance measures how far the numbers in a vector is spread out from their average value.
+
+Since we can do operations element wise in R, the variance can be compute as:
+
+::: boxTask
+Compute the variance "the pedestrian way" by mimicking what we did for the computation of the mean.
+:::
+
+```{r eval=TRUE}
+n <- length(x)
+pedestrian_variance_x <- NULL
+pedestrian_variance_x 
+```
+
+In R, the built-in function to compute the variance is `var()`.
+
+Let's check if we got it right this time:
+
+```{r eval=TRUE}
+all.equal(pedestrian_variance_x, var(x))
+```
+
+::: boxTask
+Give it a go:
+
+What is the result of `pedestrian_variance_x == var(x)`?
+:::
+
+## Standard deviation
+
+Standard deviation: $\underline x$ is $\mathrm{sd}(\underline x) = \sqrt{\mathrm{var}(\underline x)}$.
+
+Standard deviation can also measure of how dispersed the data is in relation to the mean, it's the square root of the variance.
+
+Since we have already got the variance, it should be a piece of cake to compute the standard deviation.
+
+```{r class.source="fill-in-blank"}
+pedestrian_sd_x <- ___
+pedestrian_sd_x 
+```
+
+::: boxTask
+Give it a go:
+
+1.  Replace the `___` by the correct code to compute the standard deviation the pedestrian way.
+
+2.  In R, the built-in function to compute the variance is `sd()`, check your "pedestrian" result with the built-in function
+:::
+
+```{r class.source="fill-in-blank"}
+all.equal(____, ____)
+```
+
+## Covariance
+
+Covariance of two vectors $\underline x,\underline y$ of *same length* is $\mathrm{cov}(\underline x,\underline y) = \frac{1}{n-1}\sum_{i=1}(x_i-\mathrm{mean}(\underline x))\cdot (y_i-\mathrm{mean}(\underline y))$.
+
+Covariance is a measure of the variance between two variables, it evaluates how much the variables change together.
+
+You may have noticed that the *variance* is the special case of the variance if two variables are identical.
+
+```{r class.source="fill-in-blank"}
+pedestrian_mean_y <- ____
+pedestrian_covariance <-____
+pedestrian_covariance
+```
+
+::: boxTask
+Give it a go:
+
+Again, compare it with the built in function, `cov(x,y)`.
+:::
+
+```{r  class.source="fill-in-blank"}
+all.equal(____, ____)
+```
+
+## Correlation
+
+Correlation of two vectors $\underline {x},\underline y$ of *same length* is $\mathrm{corr}(\underline x,\underline y) = \frac{\mathrm{cov}(x,y)}{\mathrm{sd}(\underline x) \cdot \mathrm{sd}(\underline y) }$.
+
+Correlation can also tell us the direction of the linear relationship between two variables and since it's a standarised measurement, it can also show us the strength.
+
+::: boxTask
+Give it a go:
+
+With the given formula, can you compute `pedestrian_correlation` and then compare it with the built-in function, `cor(x, y)`?
+:::
+
+```{r  class.source="fill-in-blank"}
+pedestrian_correlation <- ____
+
+all.equal(____, ____)
+```
+
+# Mean estimation process
+
+We collect a sample to estimate the population, with the help of the computer, we can repeat the process many times in a blink to get a better estimation.
+
+Suppose we are sampling from a normal distributed population with "unknown" mean and variance. We can construct a confidence interval via t-distribution, we repeat this process for 100 times and count how many times we have the coverage. Also compare this to the naïve Gauss-type confidence interval.
+
+## Set up
+
+Let's say we sample 10 cases from a normal distributed population, but pretend we don't know the mean and variance are both about 100 at this point.
+
+```{r eval=TRUE}
+set.seed(1)
+population_data <- rnorm(n = 10000, mean = 100, sd = sqrt(100))
+true_mean <- mean(population_data)
+true_sd <- sd(population_data)
+sample_size <- 10
+sample_data <- sample(population_data, size = sample_size)
+simulations <- 100 
+alpha <- 0.05
+```
+
+::: boxNote
+From here on you can just use `mean`, `cov`, `sd`, and `cor`. No need to remain a pedestrian here.
+:::
+
+## Confidence interval via t-distribution
+
+The confidence interval can be constructed as $$\left [\hat \mu - t_{1-\alpha/2}(n-1) \cdot \frac{\sqrt{\widehat \sigma^2}}{\sqrt n},~~\hat \mu + t_{1-\alpha/2}(n-1) \cdot \frac{\sqrt{\widehat \sigma^2}}{\sqrt n}\right] $$
+
+We know the sample size is 10, to get the confidence interval, we still need to compute:
+
+-   sample mean: $\hat \mu$
+-   sample standard deviation: $\sqrt{\widehat \sigma^2}$
+-   critical value: $t_{1-\alpha/2}(n-1)$
+
+```{r  class.source="fill-in-blank"}
+sample_mean <- ____
+sample_sd <- ____
+t_critical <- qt(____, ____)
+```
+
+We have all the values we need for the confidence interval:
+
+```{r  class.source="fill-in-blank"}
+moe <- ____
+
+lower_limit <- sample_mean - moe 
+upper_limit <- sample_mean + moe
+
+```
+
+```{r}
+sprintf("The %.0f%% confidence interval from this sample is from %.3f to %.3f(3dp).",
+        (1-alpha)*100,
+        lower_limit,
+        upper_limit)
+```
+
+Check if we captured the true mean in this sample.
+
+```{r}
+upper_limit >= true_mean & true_mean >= lower_limit
+```
+
+Since we need to repeat this process many times, it's a good idea to wrap it into a function, we just need to know the result when we provide a sample size and confidence level. Consider the population_data is a constant here. *As for default setting, make the sample size be 10 and confidence level be 95%*
+
+```{r  class.source="fill-in-blank"}
+# this function runs an experiment, generates the confidence interval, and checks whether the confidence interval actually includes the true parameter.
+# this is returned as a TRUE/FALSE value.
+check_coverage_t <- function(n = 10, alpha = 0.05){ 
+  sample_data_t <- ____
+  sample_mean_t <- ____
+  sample_sd_t <- ____
+  critical_value_t <- qt(____, ____)
+  moe_t <- ____
+  lower_limit_t <- sample_mean_t - moe_t
+  upper_limit_t <- sample_mean_t + moe_t
+  return(upper_limit_t >= true_mean & true_mean >= lower_limit_t)
+}
+```
+
+Run this function for once:
+
+```{r}
+check_coverage_t(n = 10, alpha = 0.05)
+```
+
+Now we need to repeat this iteration many times. We *could* use a `for` loop for that. But, instead we are going to use the function `replicate(n, expr)` which can help us when we need to evaluate an expression again and again. See Lab 1 for an explanation of what `replicate` does.
+
+```{r eval=TRUE}
+# check a random number generated between 0 and 1 is greater than 0.5 or not
+runif(1, 0, 1) > 0.5
+
+# repeat the same process 10 times
+replicate(n = 10, expr = runif(1, 0, 1) > 0.5)
+
+# find out the chance that the random number is greater than 0.5 from 10 iterations
+sum(replicate(n = 10, expr = runif(1, 0, 1) > 0.5))/10
+```
+
+In our case: We want to check, how often the confidence interval for a given confidence level covers the true parameter. The following line does this. This is already quite tricky to understand if you are new to `R`.
+
+```{r}
+sum(replicate(n = 100, expr = check_coverage_t(n = 10, alpha = 0.05)))/100
+```
+
+::: boxTask
+Make sure you understand exactly what the following line of code does. If it helps, break apart the nested function calls into single lines in a new code block that you create, i.e. first run replicate and save it in a vector. Then evaluate `sum` on it. Note that `sum` can operate on logical values (and counts `TRUE` as `1`, and `FALSE` as 0.
+:::
+
+In case we need to alter any of the inputs, we can wrap everything into a function too:
+
+```{r  class.source="fill-in-blank"}
+coverage_t <- function(n = 10, alpha = 0.05, repeats = 100){
+  captured_counts_t <- sum(replicate(n = ____, expr = ____))
+  return(captured_counts_t/repeats)
+}
+```
+
+Now we can get the proportion of coverage by just input the sample size, confidence level and number of repeats we defined earlier.
+
+```{r}
+coverage_t(n = sample_size, alpha = alpha, repeats = simulations)
+```
+
+::: boxTask
+Give it a go:
+
+1.  Explore how the coverage rate changes with different sample size, alpha and number of repeats.
+
+2.  Check whether the confidence does what it should be doing: For large sample size, the result of `coverage` should be close to the theoretical (statistical) coverage of $1-\alpha$). Check whether this is indeed the case.
+
+3.  Replace the t-quantiles with Gaussian quantiles and understand when things go wrong.
+:::

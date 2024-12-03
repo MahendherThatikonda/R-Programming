@@ -1,0 +1,207 @@
+---
+title: "Untitled"
+author: "Mahendher Thatikonda"
+date: "2024-10-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+library(tree)
+library(ISLR)
+View(Carseats)
+attach(Carseats)
+head(Carseats)
+library(rpart)
+```
+Turn into a classification problem (two class: High and Low)
+```{r}
+Carseats
+Carseats$High = ifelse(Sales <= 8, "No", "Yes")
+Carseats$High = as.factor(Carseats$High)
+```
+
+Build a classification tree
+```{r}
+tree.carseats=tree(High~.-Sales,Carseats)
+summary(tree.carseats)
+plot(tree.carseats)
+text(tree.carseats)
+tree.carseats
+```
+
+Estimate the accuracy of the tree
+```{r}
+set.seed(1)
+train=sample(1:nrow(Carseats), 200)
+Carseats.test=Carseats[-train,]
+nrow(Carseats.test)
+High = Carseats$High
+High.test=High[-train]
+tree.carseats=tree(High~.-Sales,Carseats,subset=train)
+tree.pred=predict(tree.carseats,Carseats.test,type="class")
+table(tree.pred,High.test)
+(84+44)/200
+```
+
+Use cross validation to choose tree complexity
+
+```{r}
+set.seed(3)
+cv.carseats=cv.tree(tree.carseats,FUN=prune.misclass)
+cv.carseats
+plot(cv.carseats$size,cv.carseats$dev,type="b")
+```
+
+Prune the tree with 6 terminal nodes
+
+```{r}
+prune.carseats=prune.misclass(tree.carseats,best=6)
+plot(prune.carseats)
+text(prune.carseats,pretty=0)
+tree.pred=predict(prune.carseats,Carseats.test,type="class")
+table(tree.pred,High.test)
+(86+49)/200
+
+```
+
+Prune the tree with 5 terminal nodes
+
+```{r}
+prune.carseats=prune.misclass(tree.carseats,best=5)
+plot(prune.carseats)
+text(prune.carseats,pretty=0)
+tree.pred=predict(prune.carseats,Carseats.test,type="class")
+table(tree.pred,High.test)
+(86+49)/200
+summary(prune.carseats)
+```
+Using CART to solve this problem
+```{r}
+fit = rpart(High~.-Sales,method="class",data=Carseats[train,])
+#control=rpart.control(minsplit=2,cp=0)) 
+summary(fit)
+plot(fit)
+text(fit,pretty=0)
+```
+
+## Fitting Regression Trees
+
+```{r}
+library(MASS)
+set.seed(1)
+train = sample(1:nrow(Boston), nrow(Boston)/2)
+```
+
+Grow the regression tree
+
+```{r}
+tree.boston=tree(medv~.,Boston,subset=train)
+summary(tree.boston)
+plot(tree.boston)
+text(tree.boston,pretty=0)
+```
+
+Use cross validation to choose tree complexity
+
+```{r}
+cv.boston=cv.tree(tree.boston)
+plot(cv.boston$size,cv.boston$dev,type='b')
+cv.boston
+```
+
+Prune the tree
+
+```{r}
+prune.boston=prune.tree(tree.boston,best=5)
+plot(prune.boston)
+text(prune.boston,pretty=0)
+```
+Estimate the error of the tree
+```{r}
+yhat=predict(tree.boston,newdata=Boston[-train,])
+boston.test=Boston[-train,"medv"]
+mean((yhat-boston.test)^2)
+
+yhat=predict(prune.boston,newdata=Boston[-train,])
+boston.test=Boston[-train,"medv"]
+mean((yhat-boston.test)^2)
+```
+## Bagging and Random Forests
+```{r}
+library(ISLR)
+library(MASS)
+library(randomForest)
+set.seed(1)
+train = sample(1:nrow(Boston), nrow(Boston)/2)
+```
+Generate bagged trees
+
+```{r}
+bag.boston=randomForest(medv~.,data=Boston,subset=train,mtry=13,importance=TRUE)
+bag.boston
+yhat.bag = predict(bag.boston,newdata=Boston[-train,])
+boston.test=Boston[-train,"medv"]
+plot(yhat.bag, boston.test)
+abline(0,1)
+mean((yhat.bag-boston.test)^2)
+```
+
+Try increasing the number of trees
+
+```{r}
+bag.boston=randomForest(medv~.,data=Boston,subset=train,mtry=13,ntree=1000)
+yhat.bag = predict(bag.boston,newdata=Boston[-train,])
+bag.boston
+mean((yhat.bag-boston.test)^2)
+```
+Try a random forest
+
+```{r}
+set.seed(1)
+rf.boston=randomForest(medv~.,data=Boston,subset=train,mtry=6,importance=TRUE)
+yhat.rf = predict(rf.boston,newdata=Boston[-train,])
+mean((yhat.rf-boston.test)^2)
+importance(rf.boston)
+varImpPlot(rf.boston)
+```
+## Boosting
+
+```{r}
+library(gbm)
+set.seed(1)
+boost.boston=gbm(medv~.,data=Boston[train,],distribution="gaussian",n.trees=5000,interaction.depth=4)
+summary(boost.boston)
+yhat.boost=predict(boost.boston,newdata=Boston[-train,],n.trees=5000)
+mean((yhat.boost-boston.test)^2)
+```
+change the shrinkage factor and tree depth
+
+```{r}
+boost.boston=gbm(medv~.,data=Boston[train,],distribution="gaussian",n.trees=5000,interaction.depth=4,shrinkage=0.01)
+yhat.boost=predict(boost.boston,newdata=Boston[-train,],n.trees=5000)
+mean((yhat.boost-boston.test)^2)
+```
+

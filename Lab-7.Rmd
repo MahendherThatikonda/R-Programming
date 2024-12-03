@@ -1,0 +1,392 @@
+---
+title: "ISLR-R: 7. Clustering Analysis"
+output:
+  prettydoc::html_pretty:
+    toc: true
+    theme: cayman
+    highlight: github
+    df_print: paged
+date: "2024-05-03"
+editor_options:
+  markdown:
+    wrap: 79
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+import::from(magrittr, "%>%", "%$%", .into = "operators")
+library(ggplot2)
+library(mclust)
+```
+
+In this lab you will work through Section 10.5.
+
+## Preparation
+
+We construct a dataset to analyse using cluster analysis and hierarchical
+cluster analysis.
+In this second example, we write a function that generates bivariate normal
+random variables:
+
+```{r}
+rbivariate <- function(mean.x = 0, sd.x = 1,
+                       mean.y = 0, sd.y = 1, r = 0,
+                       n = 100, label = 0) {
+  z1 <- rnorm(n)
+  z2 <- rnorm(n)
+  x <- sqrt(1 - r^2) * sd.x * z1 + r * sd.x * z2 + mean.x
+  y <- sd.y * z2 + mean.y
+  z <- rep(label, n)
+  return(cbind(x, y, z))
+}
+```
+
+and a function to visualize dataset:
+
+```{r}
+plot_data <- function(data, subtitle = "") {
+  p <- data %>%
+    ggplot(data = ., mapping = aes(x = x, y = y)) +
+    scale_color_manual(values = c(
+      "#00AFBB", "#FC4E07", "#e7b800", "#006400", "#9400D3", "#FF8C00",
+      "#008080"
+    )) +
+    geom_point(
+      mapping = aes(color = z %>% factor()),
+      size = 3.0, alpha = 0.4
+    ) +
+    labs(
+      title = "Dataset for Clustering",
+      subtitle = subtitle,
+      x = "X", y = "Y", color = "Ground Truth"
+    ) +
+    theme_grey()
+  return(p)
+}
+```
+
+We also need a function to visualize the result:
+
+```{r}
+plot_clust <- function(data, label, method = "", subtitle = "") {
+  p <- data %>%
+    dplyr::mutate(pred = label) %>%
+    ggplot(data = ., mapping = aes(x = x, y = y)) +
+    scale_color_manual(values = c(
+      "#00AFBB", "#FC4E07", "#e7b800", "#006400", "#9400D3", "#FF8C00",
+      "#008080"
+    )) +
+    scale_shape_manual(values = c(15, 19, 17)) +
+    geom_point(
+      mapping = aes(color = pred %>% factor(), shape = z %>% factor()),
+      size = 3.0, alpha = 0.4
+    ) +
+    labs(
+      title = paste0(method, " Clustering"),
+      subtitle = subtitle,
+      x = "X", y = "Y",
+      color = "Prediction", shape = "Ground Truth"
+    ) +
+    theme_grey()
+  return(p)
+}
+```
+
+Let's create a dataset and visualize it: 
+
+```{r}
+set.seed(10)
+c1 <- rbivariate(
+  mean.x = 1.5, sd.x = 0.1, mean.y = 0.5, sd.y = 0.1, n = 50,
+  label = 1
+)
+c2 <- rbivariate(
+  mean.x = 0.0, sd.x = 0.5, mean.y = 0.0, sd.y = 0.5, n = 200,
+  label = 2
+)
+c3 <- rbivariate(
+  mean.x = 1.5, sd.x = 0.1, mean.y = -0.5, sd.y = 0.1, n = 50,
+  label = 3
+)
+dat <- rbind(c1, c2, c3) %>% as.data.frame()
+dat.x <- dat[, 1:2]
+dat.y <- dat[, 3]
+
+plot_data(dat)
+```
+
+## K-means Clustering
+
+### First Experiment
+
+```{r}
+km.out <- kmeans(dat.x, 3, nstart = 10)
+```
+
+Model summary:
+
+```{r}
+km.out
+```
+
+Visualization:
+
+```{r}
+plot_clust(dat, km.out$cluster, "K-Means", "with K=3 and N-Trials=10")
+```
+
+### Silhouette Coefficient
+
+```{r}
+silval <- rep(0, 9)
+wss <- rep(0, 9)
+for (k in 2:10) {
+  C <- kmeans(dat.x, k, nstart = 100)
+  s <- cluster::silhouette(C$cluster, dist(dat.x))
+  xx <- summary(s)
+  silval[k - 1] <- xx$avg.width
+  wss[k - 1] <- 1 - C$tot.withinss / C$totss
+}
+
+# create a data frame for ggplot
+# use ggplot to create the plot
+p <- data.frame(
+  K = rep(2:10, 2),
+  Value = c(silval, wss),
+  Measure = factor(rep(c("Silhouette", "WSS"), each = 9))
+) %>% ggplot(data = ., aes(x = K, y = Value, color = Measure)) +
+  geom_line() +
+  facet_grid(Measure ~ ., scales = "free_y") +
+  scale_color_manual(values = c("Silhouette" = "blue", "WSS" = "red")) +
+  labs(x = "Number of clusters", y = "") +
+  theme(legend.title = element_blank())
+
+print(p)
+```
+
+### Add Number of Trials
+
+```{r}
+km.out <- kmeans(dat.x, 3, nstart = 1000)
+km.out$tot.withinss
+```
+
+Visualization:
+
+```{r}
+plot_clust(dat, km.out$cluster, "K-Means", "with K=3 and N-Trials=1000")
+```
+
+### Change Number of Clusters
+
+```{r}
+km.out <- kmeans(dat.x, 7, nstart = 100)
+km.out$tot.withinss
+```
+
+Visualization:
+
+```{r}
+plot_clust(dat, km.out$cluster, "K-Means", "with K=7 and N-Trials=1000")
+```
+
+### Specify Centers
+
+We can also run the clustering algorithm with the 'correct' centres specified:
+
+```{r}
+km.out <- kmeans(dat.x,
+  centers = rbind(c(1.5, 0.5), c(0, 0), c(1.5, -0.5)),
+  nstart = 100
+)
+km.out$tot.withinss
+```
+
+```{r}
+plot_clust(dat, km.out$cluster, "K-Means", "with Centers Specified")
+```
+
+## Hierarchical Clustering
+
+We can analyse the data using complete, single, and average linkage, and
+compare the results:
+
+### Complete Linkage
+
+```{r}
+hc.complete <- hclust(dist(dat.x), method = "complete")
+plot(hc.complete, main = "Complete Linkage", xlab = "", sub = "", cex = .3)
+plot_clust(dat, cutree(hc.complete, 3), "Hierarchical", "Complete Linkage")
+```
+
+### Single Linkage
+
+```{r}
+hc.single <- hclust(dist(dat.x), method = "single")
+plot(hc.single, main = "Single Linkage", xlab = "", sub = "", cex = .3)
+plot_clust(dat, cutree(hc.single, 3), "Hierarchical", "Single Linkage")
+```
+
+### Average Linkage
+
+```{r}
+hc.average <- hclust(dist(dat.x), method = "average")
+plot(hc.average, main = "Average Linkage", xlab = "", sub = "", cex = .3)
+plot_clust(dat, cutree(hc.average, 3), "Hierarchical", "with Average Linkage")
+```
+
+## Single vs. Complete Linkage
+
+Hierarchical Methods:
+
+- Single Linkage
+  - calculates the minimum distance between clusters
+  - distance between the closest points of two clusters.
+  - tends to produce long, "loose" clusters.
+  - sensitive to outliers
+  - a.k.a the Nearest Point Algorithm
+- Complete Linkage
+  - calculates the maximum distance between clusters
+  - distance between the farthest points of two clusters
+  - tends to produce more compact clusters.
+  - a.k.a. the Farthest Point Algorithm
+- Average Linkage
+  - calculates the average distance between clusters
+  - average distance between all pairs of points in two different clusters
+
+```{r}
+set.seed(10)
+df_round <- rbind(
+  rbivariate(
+    mean.x = -1, sd.x = 0.5, mean.y = -1, sd.y = 0.5, n = 200,
+    label = 1
+  ),
+  rbivariate(
+    mean.x = 1, sd.x = 0.5, mean.y = 1, sd.y = 0.5, n = 200,
+    label = 2
+  )
+) %>% as.data.frame()
+df_diag <- rbind(
+  rbivariate(
+    mean.x = 0, sd.x = .5, mean.y = 0, r = 0.8, sd.y = .5, n = 200,
+    label = 1
+  ),
+  rbivariate(
+    mean.x = 1.5, sd.x = .1, mean.y = -.5, sd.y = .1, n = 200,
+    label = 2
+  )
+) %>% as.data.frame()
+
+plot_data(data = df_round, subtitle = "Spherical Data")
+plot_data(data = df_diag, subtitle = "Diagonal Data")
+```
+
+### Experiments
+
+Spherical data + Single Linkage
+
+```{r}
+df_round[, 1:2] %>%
+  dist() %>%
+  hclust(d = ., method = "single") %>%
+  cutree(tree = ., k = 2) %>%
+  plot_clust(
+    data = df_round, label = ., "Hierarchical (Single Linkage)",
+    "with Spherical Data"
+  )
+```
+
+Spherical data + Complete Linkage
+
+```{r}
+df_round[, 1:2] %>%
+  dist() %>%
+  hclust(d = ., method = "complete") %>%
+  cutree(tree = ., k = 2) %>%
+  plot_clust(
+    data = df_round, label = ., "Hierarchical (Complete Linkage)",
+    "with Spherical Data"
+  )
+```
+
+Diagonal data + Single Linkage
+
+```{r}
+df_diag[, 1:2] %>%
+  dist() %>%
+  hclust(d = ., method = "single") %>%
+  cutree(tree = ., k = 2) %>%
+  plot_clust(
+    data = df_diag, label = ., "Hierarchical (Single Linkage)",
+    "with Diagonal Data"
+  )
+```
+
+Spherical data + Complete Linkage
+
+```{r}
+df_diag[, 1:2] %>%
+  dist() %>%
+  hclust(d = ., method = "complete") %>%
+  cutree(tree = ., k = 2) %>%
+  plot_clust(
+    data = df_diag, label = ., "Hierarchical (Complete Linkage)",
+    "with Diagonal Data"
+  )
+```
+
+
+
+## Gaussian Mixture Model (GMM)
+
+```{r}
+mdl <- mclust::Mclust(dat.x)
+mdl %>% summary()
+```
+
+```{r}
+plot_clust(data = dat, mdl$classification, "GMM")
+```
+
+## Appendix
+
+### Distance
+
+Formula of Minkowski Distance:
+
+$$\left(\sum_{i=i}^d \left| x_i - y_i \right|^p \right) ^\frac{1}{p}$$
+
+We first specify a distance matrix:
+
+```{r}
+EG <- matrix(c(1, 2, 6, 2, 3, 1, 1, 3, 4, 5, 2, 4, 6, 0, 1),
+  nrow = 5, ncol = 3
+)
+EG
+```
+
+Calculate distances:
+
+```{r}
+# Minkowski Distance (p = 2)
+dist(EG, "minkowski", diag = F, upper = F, p = 2)
+# Euclidean Distance
+dist(EG, "euclidean", diag = F, upper = F)
+```
+
+### Explained Variance Ratio
+
+- No universal threshold
+- Always increase when $K$ increases
+
+Between class
+
+$$\text{SS}_{bt} = \sum_{i=1}^{k} n_i \cdot (\bar{x}_i - \bar{x})^2$$
+
+Total
+
+$$\text{SS}_{tot} = \sum_{i=i}^{k} \sum_{j=1}^{n_i} (x_{ij} - \bar{x})^2$$
+
+Within-Cluster
+
+$$\text{SS}_{in} = \sum_{i=1}^{k} \sum_{j=1}^{n_i} (x_{ij} - \bar{x}_{i})^2$$

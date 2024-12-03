@@ -1,0 +1,194 @@
+---
+title: "Lab0_Practice"
+author: "Mahendher Thatikonda"
+date: "2024-08-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+x\<-10 x
+
+```{r}
+print("Mahendher")
+```
+# showcasing use of help
+
+```{r}
+?print
+x <- 10
+x
+```
+# %>%  (cntrl + shift + M) is used for Pipeline
+```{r}
+
+```
+
+<!-- this is used to  -->
+<!-- write multiple comments -->
+
+```{r}
+myNum<-c(1, 2, 3, pi, 0.1, -1/6)
+myNum
+```
+```{r}
+myChar <- c("The ", "quick", " brown fox jumped ", "over the ", "lazy dog 27 times", ".")
+myChar
+```
+```{r}
+myFactor <- factor(x = c("High", "Low", "Low", "Medium", "Low", "High"), levels = c("Low", "Medium", "High"), ordered = TRUE)
+myFactor
+```
+```{r}
+myDate <- c(Sys.time() - 1,
+            Sys.time(),
+            Sys.time() + 1,
+            Sys.Date() - 1,
+            Sys.Date(),
+            Sys.Date() + 1
+            )
+```
+
+<!-- Execute the above function -->
+
+```{r}
+myDate
+```
+```{r}
+runif(10,min=25, max = 50)
+?runif
+```
+# try to work on sample
+
+```{r}
+set.seed(99)
+df <- runif(100,min=10, max = 50)
+df[76]
+```
+<!-- now consider list -->
+
+```{r}
+shopping <- c("Coffee", "Milk", "Biscuits (chocolate)", "Carrots", "Rice (basmati)", "Juice (apple)")
+is.data.frame(shopping)
+is.vector(shopping)
+is.list(shopping)
+```
+<!-- now use the concept of logical list -->
+```{r}
+shopping <- c(`Coffee` = TRUE, `Milk` = TRUE, `Biscuits (chocolate)` = TRUE, `Carrots` = FALSE, `Rice (basmati)` = FALSE, `Juice (apple)` = FALSE, `Juice (orange)` = TRUE)
+is.list(shopping)
+is.vector(shopping)
+View(shopping)
+print(shopping)
+```
+```{r}
+Jan01 <- c(`Coffee` = TRUE, `Milk` = TRUE, `Biscuits (chocolate)` = TRUE, `Carrots` = FALSE, `Rice (basmati)` = FALSE, `Juice (apple)` = FALSE, `Juice (orange)` = TRUE)
+
+Jan02 <- c(`Coffee` = FALSE, `Milk` = TRUE, `Biscuits (chocolate)` = FALSE, `Carrots` = TRUE, `Rice (basmati)` = FALSE, `Juice (apple)` = FALSE, `Juice (orange)` = TRUE)
+
+Jan04 <- c(`Coffee` = FALSE, `Milk` = TRUE, `Biscuits (chocolate)` = FALSE, `Carrots` = TRUE, `Rice (basmati)` = FALSE, `Juice (apple)` = FALSE, `Juice (orange)` = TRUE)
+```
+
+print(Jan01)
+
+print(Jan02)
+
+print(Jan04)
+
+```{r}
+grocery_list <- list(Jan01,Jan02,Jan04)
+is.list(grocery_list)
+```
+
+<!-- print() -->
+```{r}
+print(grocery_list)
+```
+```{r}
+print(shopping)
+```
+
+```{r}
+shoppingHistory = list(`Jan06`=Jan01, `Jan07`=Jan02, `Jan04`=Jan04)
+print(shoppingHistory)
+```
+<!-- create a list of numbers from 1 to 100 which are divisible by 2&3 -->
+
+```{r}
+numbers <- c(1:100)
+for(i in numbers) {
+  if(i%%2 == 0 & i%%3==0 & i%%15!=0){
+    print(i)
+  }
+}
+```
+<!-- how to deal with character strings -->
+```{r}
+myName <- "My name is Mahendher"
+length(myName)
+nchar(myName)
+```
+
+```{r}
+strafte <- strsplit(myName," ")
+```
+```{r}
+is.data.frame(strafte)
+is.vector(strafte)
+strafte[[1]]
+```
+```{r}
+# myName <- "My name is Mahendher"
+# strsplit(c(V, "This is another sentence."), split = " ")
+# V[1]
+```
+
+```{r}
+# words <- unlist(strsplit(V, split = " "))
+# words
+# words[1]
+# is.vector(words)
+```
+```{r}
+# paste(words, collapse = ".")
+```
+
+<!-- this is practice exercise -->
+
+```{r}
+phone <- "027-283-124-221"
+is.list(phone)
+is.vector(phone)
+```
+```{r}
+newphone <- strsplit(phone,"-")
+is.vector(newphone)
+is.list(newphone)
+newphoneunlis<- unlist(newphone)
+is.vector(newphoneunlis)
+is.list(newphoneunlis)
+newno <- paste(newphoneunlis,collapse = "")
+```
+

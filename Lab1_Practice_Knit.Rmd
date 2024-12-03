@@ -1,0 +1,42 @@
+---
+title: "Lab1_Practice_Knit"
+author: "Mahendher Thatikonda"
+date: "2024-08-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+getwd()
+setwd("C:/Users/lenovo/Desktop/STAT 462 Data Mining/Week1")
+x<-10
+x
+
+```{r}
+set.seed(124)
+n <- rnorm(100)
+```
+
+<!-- generate a png file to display the density curve -->
+
+```{r}
+library()
+png('curve.png')
+plot(dnorm(n)~n)
+dev.off()
+
+```
+
+```{r}
+x <- c(1:15)^2
+x[x%%7==0]
+x%%7
+```
+
+
+```{r}
+x 
+```
+
